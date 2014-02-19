@@ -1,0 +1,5 @@
+{
+  "defaultHttpMethod": "GET",
+  "maxNumberOfConcurrentXhr": 5,
+  "idKey": "ItemID"
+}
