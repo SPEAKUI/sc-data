@@ -22,7 +22,7 @@ describe( "scdata", function () {
     } );
 
     it( "should exist", function () {
-      new scdata.Item().should.have.properties( [ "json", "destroy" ] );
+      new scdata.Item().should.have.properties( [ "json" ] );
     } );
 
     it( "should be emittable", function () {

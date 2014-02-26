@@ -2,7 +2,6 @@ var is = require( "sc-is" ),
   q = require( "q" ),
   pick = require( "sc-pick" ),
   hasKey = require( "sc-hasKey" ),
-  request = require( "sc-request" ),
   emitter = require( "emitter-component" ),
   extendify = require( "sc-extendify" );
 
@@ -55,23 +54,6 @@ var Item = extendify( {
     } );
 
     return json;
-  },
-
-  destroy: function () {
-    var self = this,
-      defer = q.defer();
-
-    request( {
-
-      type: "DELETE",
-      url: self.__options.url,
-      data: self.json()
-
-    } ).then( function ( res ) {
-      defer.resolve( self );
-    } ).fail( defer.reject );
-
-    return defer.promise;
   }
 
 } );

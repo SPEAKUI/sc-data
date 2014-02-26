@@ -8,6 +8,10 @@
     "posttest": "./node_modules/.bin/forever stop server.js",
     "test": "./node_modules/.bin/mocha-phantomjs -p ./node_modules/.bin/phantomjs -s localToRemoteUrlAccessEnabled=true -s webSecurityEnabled=false test/client/index.test.html"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SPEAKUI/sc-data"
+  },
   "author": "David Tsuji",
   "license": "MIT",
   "devDependencies": {
@@ -28,7 +32,6 @@
     "sc-merge": "0.0.x",
     "sc-query": "0.0.x",
     "sc-is": "0.0.x",
-    "sc-pick": "0.0.x",
-    "sc-request": "0.0.x"
+    "sc-pick": "0.0.x"
   }
 }
