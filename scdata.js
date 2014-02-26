@@ -66,7 +66,6 @@ var is = _dereq_( "sc-is" ),
   q = _dereq_( "q" ),
   pick = _dereq_( "sc-pick" ),
   hasKey = _dereq_( "sc-hasKey" ),
-  request = _dereq_( "sc-request" ),
   emitter = _dereq_( "emitter-component" ),
   extendify = _dereq_( "sc-extendify" );
 
@@ -119,23 +118,6 @@ var Item = extendify( {
     } );
 
     return json;
-  },
-
-  destroy: function () {
-    var self = this,
-      defer = q.defer();
-
-    request( {
-
-      type: "DELETE",
-      url: self.__options.url,
-      data: self.json()
-
-    } ).then( function ( res ) {
-      defer.resolve( self );
-    } ).fail( defer.reject );
-
-    return defer.promise;
   }
 
 } );
@@ -143,7 +125,7 @@ var Item = extendify( {
 emitter( Item.prototype );
 
 module.exports = Item;
-},{"emitter-component":5,"q":6,"sc-extendify":8,"sc-hasKey":10,"sc-is":14,"sc-pick":21,"sc-request":30}],4:[function(_dereq_,module,exports){
+},{"emitter-component":5,"q":6,"sc-extendify":8,"sc-hasKey":10,"sc-is":14,"sc-pick":21}],4:[function(_dereq_,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
