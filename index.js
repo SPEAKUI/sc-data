@@ -6,6 +6,7 @@ var is = require( "sc-is" ),
   merge = require( "sc-merge" ),
   hasKey = require( "sc-hasKey" ),
   emitter = require( "emitter-component" ),
+  optionify = require( "sc-optionify" ),
   extendify = require( "sc-extendify" );
 
 var Data = extendify( {
@@ -13,7 +14,7 @@ var Data = extendify( {
   init: function ( options ) {
     var self = this;
 
-    self.options = merge( {}, options );
+    self.option( merge( {}, options ) );
     self.url = hasKey( self.options, "url", "string" ) ? self.options.url : "";
     self.type = hasKey( self.options, "type", "string" ) ? self.options.type : config.defaultHttpMethod;
   },
@@ -49,6 +50,7 @@ var Data = extendify( {
 } );
 
 emitter( Data.prototype );
+optionify( Data.prototype );
 
 exports = module.exports = Data;
 exports.config = config;

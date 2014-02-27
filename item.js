@@ -3,12 +3,12 @@ var is = require( "sc-is" ),
   pick = require( "sc-pick" ),
   hasKey = require( "sc-hasKey" ),
   emitter = require( "emitter-component" ),
+  optionify = require( "sc-optionify" ),
   extendify = require( "sc-extendify" );
 
-var defineProperties = function ( item, data, options ) {
+var defineProperties = function ( item, data ) {
   var self = item;
 
-  options = is.an.object( options ) ? options : {};
   data = is.an.object( data ) ? data : {};
 
   Object.defineProperties( self, {
@@ -17,10 +17,6 @@ var defineProperties = function ( item, data, options ) {
       get: function () {
         return self[ "__trackable" ] === true;
       }
-    },
-
-    "__options": {
-      value: options
     },
 
     "__originalKeys": {
@@ -33,6 +29,8 @@ var defineProperties = function ( item, data, options ) {
 var Item = extendify( {
 
   init: function ( data, options ) {
+
+    this.option( is.an.object( options ) ? options : {} );
 
     defineProperties( this, data, options );
 
@@ -59,5 +57,6 @@ var Item = extendify( {
 } );
 
 emitter( Item.prototype );
+optionify( Item.prototype );
 
 module.exports = Item;

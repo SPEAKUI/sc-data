@@ -13,6 +13,7 @@ var is = _dereq_( "sc-is" ),
   merge = _dereq_( "sc-merge" ),
   hasKey = _dereq_( "sc-hasKey" ),
   emitter = _dereq_( "emitter-component" ),
+  optionify = _dereq_( "sc-optionify" ),
   extendify = _dereq_( "sc-extendify" );
 
 var Data = extendify( {
@@ -20,7 +21,7 @@ var Data = extendify( {
   init: function ( options ) {
     var self = this;
 
-    self.options = merge( {}, options );
+    self.option( merge( {}, options ) );
     self.url = hasKey( self.options, "url", "string" ) ? self.options.url : "";
     self.type = hasKey( self.options, "type", "string" ) ? self.options.type : config.defaultHttpMethod;
   },
@@ -56,23 +57,24 @@ var Data = extendify( {
 } );
 
 emitter( Data.prototype );
+optionify( Data.prototype );
 
 exports = module.exports = Data;
 exports.config = config;
 exports.Query = Query;
 exports.Item = Item;
-},{"./config.json":1,"./item":3,"emitter-component":5,"q":6,"sc-extendify":8,"sc-hasKey":10,"sc-is":14,"sc-merge":19,"sc-query":23}],3:[function(_dereq_,module,exports){
+},{"./config.json":1,"./item":3,"emitter-component":5,"q":6,"sc-extendify":8,"sc-hasKey":10,"sc-is":14,"sc-merge":19,"sc-optionify":21,"sc-query":24}],3:[function(_dereq_,module,exports){
 var is = _dereq_( "sc-is" ),
   q = _dereq_( "q" ),
   pick = _dereq_( "sc-pick" ),
   hasKey = _dereq_( "sc-hasKey" ),
   emitter = _dereq_( "emitter-component" ),
+  optionify = _dereq_( "sc-optionify" ),
   extendify = _dereq_( "sc-extendify" );
 
-var defineProperties = function ( item, data, options ) {
+var defineProperties = function ( item, data ) {
   var self = item;
 
-  options = is.an.object( options ) ? options : {};
   data = is.an.object( data ) ? data : {};
 
   Object.defineProperties( self, {
@@ -81,10 +83,6 @@ var defineProperties = function ( item, data, options ) {
       get: function () {
         return self[ "__trackable" ] === true;
       }
-    },
-
-    "__options": {
-      value: options
     },
 
     "__originalKeys": {
@@ -97,6 +95,8 @@ var defineProperties = function ( item, data, options ) {
 var Item = extendify( {
 
   init: function ( data, options ) {
+
+    this.option( is.an.object( options ) ? options : {} );
 
     defineProperties( this, data, options );
 
@@ -123,9 +123,10 @@ var Item = extendify( {
 } );
 
 emitter( Item.prototype );
+optionify( Item.prototype );
 
 module.exports = Item;
-},{"emitter-component":5,"q":6,"sc-extendify":8,"sc-hasKey":10,"sc-is":14,"sc-pick":21}],4:[function(_dereq_,module,exports){
+},{"emitter-component":5,"q":6,"sc-extendify":8,"sc-hasKey":10,"sc-is":14,"sc-optionify":21,"sc-pick":22}],4:[function(_dereq_,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -2611,6 +2612,54 @@ module.exports = merge;
 },{"type-component":20}],20:[function(_dereq_,module,exports){
 module.exports=_dereq_(11)
 },{}],21:[function(_dereq_,module,exports){
+var merge = _dereq_( "sc-merge" );
+
+var optionify = function ( value, options ) {
+  var valueIsAFunction = typeof value === "function",
+    obj = valueIsAFunction ? value.prototype : value;
+
+  if ( Object.hasOwnProperty.call( obj, "__optionify" ) && obj.__optionify === true ) {
+    return;
+  }
+
+  options = merge( {
+    propertyName: "options",
+    methodName: "option"
+  }, options );
+
+  obj[ options.propertyName ] = {};
+
+  Object.defineProperty( obj, "__optionify", {
+    value: true
+  } );
+
+  Object.defineProperty( obj, options.methodName, {
+
+    value: function ( key, value ) {
+
+      if ( typeof key === "string" ) {
+
+        if ( arguments.length === 2 ) {
+          this[ options.propertyName ][ key ] = value;
+          return this;
+        } else {
+          return this[ options.propertyName ][ key ];
+        }
+
+      } else if ( typeof key === "object" ) {
+
+        this[ options.propertyName ] = key;
+        return this;
+
+      }
+    }
+
+  } );
+
+};
+
+module.exports = optionify;
+},{"sc-merge":19}],22:[function(_dereq_,module,exports){
 function pick( object, validKeys ) {
   var parsedObject = {};
 
@@ -2639,26 +2688,18 @@ function pick( object, validKeys ) {
 }
 
 module.exports = pick;
-},{}],22:[function(_dereq_,module,exports){
+},{}],23:[function(_dereq_,module,exports){
 module.exports={
 	"defaults": {
 		"defaultHttpMethod": "get"
 	}
 }
-},{}],23:[function(_dereq_,module,exports){
+},{}],24:[function(_dereq_,module,exports){
 var q = _dereq_( "q" ),
   config = _dereq_( "./config.json" ),
   extendify = _dereq_( "sc-extendify" ),
   utils = _dereq_( "./utils" );
 
-/**
- * Query object used to construct a proper query in a fluent way
- *
- * @class  Query
- * @constructor
- * @param {String} url End point url
- * @param {String} type HTTP method
- */
 var Query = extendify( {
 
   init: function ( url, type, options ) {
@@ -2666,19 +2707,50 @@ var Query = extendify( {
 
     self.url = url;
     self.type = utils.is.string( type ) ? type : config.defaults.defaultHttpMethod;
-    self.options = utils.is.object( options ) ? options : {};
-    self.parameters = self.parameters = {};
+    self.options = utils.is.an.object( options ) ? options : {};
+    self.__parameters = {};
+    self.__queries = {};
 
+  },
+
+  parameters: function ( data ) {
+    var self = this;
+    if ( utils.is.an.object( data ) ) {
+      self.__parameters = utils.merge( self.__parameters, data );
+      return self;
+    }
+    return self.__parameters;
   },
 
   parameter: function ( key, value ) {
     var self = this;
 
-    if ( self.parameters.hasOwnProperty( key ) && utils.is.empty( value ) ) {
-      return self.parameters[ key ];
+    if ( self.__parameters.hasOwnProperty( key ) && utils.is.empty( value ) ) {
+      return self.__parameters[ key ];
     }
 
-    self.parameters[ key ] = value;
+    self.__parameters[ key ] = value;
+
+    return self;
+  },
+
+  queries: function ( data ) {
+    var self = this;
+    if ( utils.is.an.object( data ) ) {
+      self.__queries = utils.merge( self.__queries, data );
+      return self;
+    }
+    return self.__queries;
+  },
+
+  query: function ( key, value ) {
+    var self = this;
+
+    if ( self.__queries.hasOwnProperty( key ) && utils.is.empty( value ) ) {
+      return self.__queries[ key ];
+    }
+
+    self.__queries[ key ] = value;
 
     return self;
   },
@@ -2692,7 +2764,8 @@ var Query = extendify( {
     requestData = {
       type: self.type,
       url: self.url,
-      data: self.parameters
+      data: self.__parameters,
+      query: self.__queries
     };
 
     self.middleware( "preRequest", function ( error, middlewareResponse ) {
@@ -2736,237 +2809,13 @@ var Query = extendify( {
 
 Query.prototype.param = Query.prototype.parameter;
 
-/**
- * specifying some predicate for filtering a request
- *
- * @method where
- * @param {String} the property you want to filter
- * @param {String} the predicate you want to assign to the filtering
- * @param {Object} the value of the predicate
- * @returns {Query} a Query Object
- */
-// Query.prototype.where = function ( attribute, operation, value ) {
-
-//   return this;
-// };
-
-/**
- * number of Entity you want to return
- *
- * @method take
- * @param {Number} the number of Entities you want to be retuned by the server
- * @returns {Query} a Query Object
- */
-// Query.prototype.take = function ( number ) {
-
-//   return this;
-// };
-
-/**
- * number of Entity you want to skip from the list
- *
- * @method skip
- * @param {Number} the number of Entities you want to skip
- * @returns {Query} a Query Object
- */
-// Query.prototype.skip = function ( number ) {
-
-//   return this;
-// };
-
-/**
- * Setup a query to use orderBy filter
- *
- * @method orderBy
- * @param {String} the attribute you want to use for the sorting
- * @param {String} the direction of the sorting ("asc" or "dsc")
- * @returns {Query} a Query Object
- */
-// Query.prototype.orderBy = function ( attribute, direction ) {
-
-//   return this;
-// };
-
-/**
- * Execute the query and return a deferred Object
- *
- * @method execute
- * @returns {
-   Deferred
- }
- a Deferred Object
- */
-
 utils.optionify( Query );
 utils.useify( Query );
 
 exports = module.exports = Query;
 exports.utils = utils;
 exports.config = config;
-},{"./config.json":22,"./utils":28,"q":6,"sc-extendify":8}],24:[function(_dereq_,module,exports){
-var type = _dereq_( "type-component" ),
-  merge = _dereq_( "sc-merge" );
-
-var optionify = function ( value, options ) {
-  var valueIsAFunction = type( value ) === "function",
-    obj = valueIsAFunction ? value.prototype : value;
-
-  if ( Object.hasOwnProperty.call( obj, "__optionify" ) && obj.__optionify === true ) {
-    return;
-  }
-
-  options = merge( {
-    propertyName: "options",
-    methodName: "option"
-  }, options );
-
-  obj[ options.propertyName ] = {};
-
-  Object.defineProperty( obj, "__optionify", {
-    value: true
-  } );
-
-  Object.defineProperty( obj, options.methodName, {
-
-    value: function ( key, value ) {
-      if ( arguments.length === 2 ) {
-        this[ options.propertyName ][ key ] = value;
-        return this;
-      } else {
-        return this[ options.propertyName ][ key ];
-      }
-    }
-
-  } );
-
-};
-
-module.exports = optionify;
-},{"sc-merge":19,"type-component":25}],25:[function(_dereq_,module,exports){
-module.exports=_dereq_(11)
-},{}],26:[function(_dereq_,module,exports){
-module.exports={
-	"defaults": {
-		"middlewareKey": "all"
-	}
-}
-},{}],27:[function(_dereq_,module,exports){
-var is = _dereq_( "sc-is" ),
-  config = _dereq_( "./config.json" ),
-  noop = function () {};
-
-var useifyFunction = function ( functions, key, fn ) {
-  if ( is.not.empty( key ) && is.a.string( key ) ) {
-    if ( is.not.an.array( functions[ key ] ) ) {
-      functions[ key ] = [];
-    }
-    if ( is.a.func( fn ) ) {
-      functions[ key ].push( fn );
-    }
-    return functions[ key ];
-  }
-}
-
-var Useify = function () {
-  this.functions = {
-    all: []
-  };
-};
-
-Useify.prototype.use = function () {
-  var self = this,
-    args = Array.prototype.slice.call( arguments ),
-    key = is.a.string( args[ 0 ] ) ? args.shift() : config.defaults.middlewareKey,
-    fn = is.a.func( args[ 0 ] ) ? args.shift() : noop;
-
-  useifyFunction( self.functions, key, fn );
-};
-
-Useify.prototype.middleware = function () {
-
-  var self = this,
-    currentFunction = 0,
-    args = Array.prototype.slice.call( arguments ),
-    middlewareKey = is.a.string( args[ 0 ] ) && is.a.func( args[ 1 ] ) ? args.shift() : config.defaults.middlewareKey,
-    callback = is.a.func( args[ 0 ] ) ? args.shift() : noop;
-
-  useifyFunction( self.functions, middlewareKey );
-
-  var next = function () {
-    var fn = self.functions[ middlewareKey ][ currentFunction++ ],
-      args = Array.prototype.slice.call( arguments );
-
-    if ( !fn ) {
-      callback.apply( self.context, args );
-    } else {
-      args.push( next );
-      fn.apply( self.context, args );
-    }
-
-  };
-
-  next.apply( self.context, args );
-
-};
-
-Useify.prototype.clear = function ( middlewareKey ) {
-  this.functions[ middlewareKey || config.defaults.middlewareKey ] = [];
-};
-
-module.exports = function ( _objectOrFunction ) {
-
-  var useify = new Useify();
-
-  if ( is.an.object( _objectOrFunction ) ) {
-
-    Object.defineProperties( _objectOrFunction, {
-
-      "use": {
-        value: function () {
-          useify.use.apply( useify, arguments );
-          return _objectOrFunction;
-        }
-      },
-
-      "middleware": {
-        value: function () {
-          useify.middleware.apply( useify, arguments );
-        }
-      },
-
-      "useify": {
-        value: useify
-      }
-
-    } );
-
-    useify.context = _objectOrFunction;
-
-  } else if ( is.a.fn( _objectOrFunction ) ) {
-
-    _objectOrFunction.prototype.middleware = function () {
-      useify.context = this;
-      useify.middleware.apply( useify, arguments );
-    };
-
-    _objectOrFunction.use = function () {
-      useify.use.apply( useify, arguments );
-      return this;
-    };
-
-    _objectOrFunction.useify = useify;
-
-  }
-
-};
-},{"./config.json":26,"sc-is":14}],28:[function(_dereq_,module,exports){
-module.exports = {
-  optionify: _dereq_( "sc-optionify" ),
-  request: _dereq_( "sc-request" ),
-  useify: _dereq_( "sc-useify" ),
-  is: _dereq_( "sc-is" )
-}
-},{"sc-is":14,"sc-optionify":24,"sc-request":30,"sc-useify":27}],29:[function(_dereq_,module,exports){
+},{"./config.json":23,"./utils":34,"q":6,"sc-extendify":8}],25:[function(_dereq_,module,exports){
 module.exports={
   "defaults": {
     "options": {
@@ -2978,7 +2827,7 @@ module.exports={
     }
   }
 }
-},{}],30:[function(_dereq_,module,exports){
+},{}],26:[function(_dereq_,module,exports){
 var config = _dereq_( "./config.json" ),
   q = _dereq_( "q" ),
   superagent = _dereq_( "superagent" ),
@@ -2998,6 +2847,7 @@ var Request = function ( options ) {
   queue = new Queue( function ( task, callback ) {
 
     superagent( task.data.type, task.data.url )[ /get/i.test( task.data.type ) ? "query" : "send" ]( task.data.data )
+      .query( task.data.query )
       .accept( "json" )
       .type( "json" )
       .end( function ( error, response ) {
@@ -3036,6 +2886,8 @@ Request.prototype.call = function ( obj, options ) {
       defer: defer
     };
 
+  task.data.query = is.an.object( task.data[ "query" ] ) ? task.data.query : {};
+
   queue.push( task, function ( error, task ) {
     defer[ error ? "reject" : "resolve" ]( error || task.response.body );
   } );
@@ -3057,7 +2909,7 @@ exports = module.exports = function ( obj, options ) {
 
 exports.use = Request.use;
 exports.useify = Request.useify;
-},{"./config.json":29,"q":6,"sc-guid":31,"sc-haskey":12,"sc-is":14,"sc-merge":19,"sc-queue":32,"sc-useify":34,"superagent":35}],31:[function(_dereq_,module,exports){
+},{"./config.json":25,"q":6,"sc-guid":27,"sc-haskey":12,"sc-is":14,"sc-merge":19,"sc-queue":28,"sc-useify":33,"superagent":29}],27:[function(_dereq_,module,exports){
 var guidRx = "{?[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}}?";
 
 exports.generate = function () {
@@ -3080,7 +2932,7 @@ exports.isValid = function ( guid ) {
   var rx = new RegExp( guidRx );
   return rx.test( guid );
 };
-},{}],32:[function(_dereq_,module,exports){
+},{}],28:[function(_dereq_,module,exports){
 /**
  * Based on : https://github.com/component/queue
  */
@@ -3157,11 +3009,7 @@ Queue.prototype.exec = function ( job ) {
 };
 
 module.exports = Queue;
-},{"sc-is":14}],33:[function(_dereq_,module,exports){
-module.exports=_dereq_(26)
-},{}],34:[function(_dereq_,module,exports){
-module.exports=_dereq_(27)
-},{"./config.json":33,"sc-is":14}],35:[function(_dereq_,module,exports){
+},{"sc-is":14}],29:[function(_dereq_,module,exports){
 /**
  * Module dependencies.
  */
@@ -4157,7 +4005,7 @@ request.put = function(url, data, fn){
 
 module.exports = request;
 
-},{"emitter":36,"reduce":37}],36:[function(_dereq_,module,exports){
+},{"emitter":30,"reduce":31}],30:[function(_dereq_,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -4315,7 +4163,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],37:[function(_dereq_,module,exports){
+},{}],31:[function(_dereq_,module,exports){
 
 /**
  * Reduce `arr` with `fn`.
@@ -4340,6 +4188,135 @@ module.exports = function(arr, fn, initial){
   
   return curr;
 };
-},{}]},{},[2])
+},{}],32:[function(_dereq_,module,exports){
+module.exports={
+	"defaults": {
+		"middlewareKey": "all"
+	}
+}
+},{}],33:[function(_dereq_,module,exports){
+var is = _dereq_( "sc-is" ),
+  config = _dereq_( "./config.json" ),
+  noop = function () {};
+
+var useifyFunction = function ( functions, key, fn ) {
+  if ( is.not.empty( key ) && is.a.string( key ) ) {
+    if ( is.not.an.array( functions[ key ] ) ) {
+      functions[ key ] = [];
+    }
+    if ( is.a.func( fn ) ) {
+      functions[ key ].push( fn );
+    }
+    return functions[ key ];
+  }
+}
+
+var Useify = function () {
+  this.functions = {
+    all: []
+  };
+};
+
+Useify.prototype.use = function () {
+  var self = this,
+    args = Array.prototype.slice.call( arguments ),
+    key = is.a.string( args[ 0 ] ) ? args.shift() : config.defaults.middlewareKey,
+    fn = is.a.func( args[ 0 ] ) ? args.shift() : noop;
+
+  useifyFunction( self.functions, key, fn );
+};
+
+Useify.prototype.middleware = function () {
+
+  var self = this,
+    currentFunction = 0,
+    args = Array.prototype.slice.call( arguments ),
+    middlewareKey = is.a.string( args[ 0 ] ) && is.a.func( args[ 1 ] ) ? args.shift() : config.defaults.middlewareKey,
+    callback = is.a.func( args[ 0 ] ) ? args.shift() : noop;
+
+  useifyFunction( self.functions, middlewareKey );
+
+  var next = function () {
+    var fn = self.functions[ middlewareKey ][ currentFunction++ ],
+      args = Array.prototype.slice.call( arguments );
+
+    if ( !fn ) {
+      callback.apply( self.context, args );
+    } else {
+      args.push( next );
+      fn.apply( self.context, args );
+    }
+
+  };
+
+  next.apply( self.context, args );
+
+};
+
+Useify.prototype.clear = function ( middlewareKey ) {
+  if ( is.a.string( middlewareKey ) && is.not.empty( middlewareKey ) ) {
+    this.functions[ middlewareKey ] = [];
+  } else {
+    this.functions = {
+      all: []
+    };
+  }
+};
+
+module.exports = function ( _objectOrFunction ) {
+
+  var useify = new Useify();
+
+  if ( is.an.object( _objectOrFunction ) ) {
+
+    Object.defineProperties( _objectOrFunction, {
+
+      "use": {
+        value: function () {
+          useify.use.apply( useify, arguments );
+          return _objectOrFunction;
+        }
+      },
+
+      "middleware": {
+        value: function () {
+          useify.middleware.apply( useify, arguments );
+        }
+      },
+
+      "useify": {
+        value: useify
+      }
+
+    } );
+
+    useify.context = _objectOrFunction;
+
+  } else if ( is.a.fn( _objectOrFunction ) ) {
+
+    _objectOrFunction.prototype.middleware = function () {
+      useify.context = this;
+      useify.middleware.apply( useify, arguments );
+    };
+
+    _objectOrFunction.use = function () {
+      useify.use.apply( useify, arguments );
+      return this;
+    };
+
+    _objectOrFunction.useify = useify;
+
+  }
+
+};
+},{"./config.json":32,"sc-is":14}],34:[function(_dereq_,module,exports){
+module.exports = {
+  merge: _dereq_( "sc-merge" ),
+  optionify: _dereq_( "sc-optionify" ),
+  request: _dereq_( "sc-request" ),
+  useify: _dereq_( "sc-useify" ),
+  is: _dereq_( "sc-is" )
+}
+},{"sc-is":14,"sc-merge":19,"sc-optionify":21,"sc-request":26,"sc-useify":33}]},{},[2])
 (2)
 });
