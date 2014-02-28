@@ -63,12 +63,13 @@ exports = module.exports = Data;
 exports.config = config;
 exports.Query = Query;
 exports.Item = Item;
-},{"./config.json":1,"./item":3,"emitter-component":5,"q":6,"sc-extendify":8,"sc-hasKey":10,"sc-is":14,"sc-merge":19,"sc-optionify":21,"sc-query":24}],3:[function(_dereq_,module,exports){
+},{"./config.json":1,"./item":3,"emitter-component":5,"q":6,"sc-extendify":8,"sc-hasKey":10,"sc-is":14,"sc-merge":19,"sc-optionify":22,"sc-query":25}],3:[function(_dereq_,module,exports){
 var is = _dereq_( "sc-is" ),
   q = _dereq_( "q" ),
   pick = _dereq_( "sc-pick" ),
   hasKey = _dereq_( "sc-hasKey" ),
   emitter = _dereq_( "emitter-component" ),
+  omit = _dereq_( "sc-omit" ),
   optionify = _dereq_( "sc-optionify" ),
   extendify = _dereq_( "sc-extendify" );
 
@@ -117,6 +118,11 @@ var Item = extendify( {
 
     } );
 
+    if ( self[ "__optionify" ] ) {
+      console.log( "__optionify" );
+      // json = omit( json, [ "options" ] );
+    }
+
     return json;
   }
 
@@ -126,7 +132,7 @@ emitter( Item.prototype );
 optionify( Item.prototype );
 
 module.exports = Item;
-},{"emitter-component":5,"q":6,"sc-extendify":8,"sc-hasKey":10,"sc-is":14,"sc-optionify":21,"sc-pick":22}],4:[function(_dereq_,module,exports){
+},{"emitter-component":5,"q":6,"sc-extendify":8,"sc-hasKey":10,"sc-is":14,"sc-omit":21,"sc-optionify":22,"sc-pick":23}],4:[function(_dereq_,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -2612,6 +2618,8 @@ module.exports = merge;
 },{"type-component":20}],20:[function(_dereq_,module,exports){
 module.exports=_dereq_(11)
 },{}],21:[function(_dereq_,module,exports){
+module.exports=_dereq_(9)
+},{}],22:[function(_dereq_,module,exports){
 var merge = _dereq_( "sc-merge" );
 
 var optionify = function ( value, options ) {
@@ -2659,7 +2667,7 @@ var optionify = function ( value, options ) {
 };
 
 module.exports = optionify;
-},{"sc-merge":19}],22:[function(_dereq_,module,exports){
+},{"sc-merge":19}],23:[function(_dereq_,module,exports){
 function pick( object, validKeys ) {
   var parsedObject = {};
 
@@ -2688,13 +2696,13 @@ function pick( object, validKeys ) {
 }
 
 module.exports = pick;
-},{}],23:[function(_dereq_,module,exports){
+},{}],24:[function(_dereq_,module,exports){
 module.exports={
 	"defaults": {
 		"defaultHttpMethod": "get"
 	}
 }
-},{}],24:[function(_dereq_,module,exports){
+},{}],25:[function(_dereq_,module,exports){
 var q = _dereq_( "q" ),
   config = _dereq_( "./config.json" ),
   extendify = _dereq_( "sc-extendify" ),
@@ -2815,7 +2823,7 @@ utils.useify( Query );
 exports = module.exports = Query;
 exports.utils = utils;
 exports.config = config;
-},{"./config.json":23,"./utils":34,"q":6,"sc-extendify":8}],25:[function(_dereq_,module,exports){
+},{"./config.json":24,"./utils":35,"q":6,"sc-extendify":8}],26:[function(_dereq_,module,exports){
 module.exports={
   "defaults": {
     "options": {
@@ -2827,7 +2835,7 @@ module.exports={
     }
   }
 }
-},{}],26:[function(_dereq_,module,exports){
+},{}],27:[function(_dereq_,module,exports){
 var config = _dereq_( "./config.json" ),
   q = _dereq_( "q" ),
   superagent = _dereq_( "superagent" ),
@@ -2909,7 +2917,7 @@ exports = module.exports = function ( obj, options ) {
 
 exports.use = Request.use;
 exports.useify = Request.useify;
-},{"./config.json":25,"q":6,"sc-guid":27,"sc-haskey":12,"sc-is":14,"sc-merge":19,"sc-queue":28,"sc-useify":33,"superagent":29}],27:[function(_dereq_,module,exports){
+},{"./config.json":26,"q":6,"sc-guid":28,"sc-haskey":12,"sc-is":14,"sc-merge":19,"sc-queue":29,"sc-useify":34,"superagent":30}],28:[function(_dereq_,module,exports){
 var guidRx = "{?[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}}?";
 
 exports.generate = function () {
@@ -2932,7 +2940,7 @@ exports.isValid = function ( guid ) {
   var rx = new RegExp( guidRx );
   return rx.test( guid );
 };
-},{}],28:[function(_dereq_,module,exports){
+},{}],29:[function(_dereq_,module,exports){
 /**
  * Based on : https://github.com/component/queue
  */
@@ -3009,7 +3017,7 @@ Queue.prototype.exec = function ( job ) {
 };
 
 module.exports = Queue;
-},{"sc-is":14}],29:[function(_dereq_,module,exports){
+},{"sc-is":14}],30:[function(_dereq_,module,exports){
 /**
  * Module dependencies.
  */
@@ -4005,7 +4013,7 @@ request.put = function(url, data, fn){
 
 module.exports = request;
 
-},{"emitter":30,"reduce":31}],30:[function(_dereq_,module,exports){
+},{"emitter":31,"reduce":32}],31:[function(_dereq_,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -4163,7 +4171,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],31:[function(_dereq_,module,exports){
+},{}],32:[function(_dereq_,module,exports){
 
 /**
  * Reduce `arr` with `fn`.
@@ -4188,13 +4196,13 @@ module.exports = function(arr, fn, initial){
   
   return curr;
 };
-},{}],32:[function(_dereq_,module,exports){
+},{}],33:[function(_dereq_,module,exports){
 module.exports={
 	"defaults": {
 		"middlewareKey": "all"
 	}
 }
-},{}],33:[function(_dereq_,module,exports){
+},{}],34:[function(_dereq_,module,exports){
 var is = _dereq_( "sc-is" ),
   config = _dereq_( "./config.json" ),
   noop = function () {};
@@ -4309,7 +4317,7 @@ module.exports = function ( _objectOrFunction ) {
   }
 
 };
-},{"./config.json":32,"sc-is":14}],34:[function(_dereq_,module,exports){
+},{"./config.json":33,"sc-is":14}],35:[function(_dereq_,module,exports){
 module.exports = {
   merge: _dereq_( "sc-merge" ),
   optionify: _dereq_( "sc-optionify" ),
@@ -4317,6 +4325,6 @@ module.exports = {
   useify: _dereq_( "sc-useify" ),
   is: _dereq_( "sc-is" )
 }
-},{"sc-is":14,"sc-merge":19,"sc-optionify":21,"sc-request":26,"sc-useify":33}]},{},[2])
+},{"sc-is":14,"sc-merge":19,"sc-optionify":22,"sc-request":27,"sc-useify":34}]},{},[2])
 (2)
 });

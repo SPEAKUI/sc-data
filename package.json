@@ -33,6 +33,7 @@
     "sc-query": "0.0.x",
     "sc-is": "0.0.x",
     "sc-pick": "0.0.x",
-    "sc-optionify": "0.0.x"
+    "sc-optionify": "0.0.x",
+    "sc-omit": "0.0.0"
   }
 }

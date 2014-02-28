@@ -3,6 +3,7 @@ var is = require( "sc-is" ),
   pick = require( "sc-pick" ),
   hasKey = require( "sc-hasKey" ),
   emitter = require( "emitter-component" ),
+  omit = require( "sc-omit" ),
   optionify = require( "sc-optionify" ),
   extendify = require( "sc-extendify" );
 
@@ -50,6 +51,10 @@ var Item = extendify( {
       }
 
     } );
+
+    if ( self[ "__optionify" ] ) {
+      json = omit( json, [ "options" ] );
+    }
 
     return json;
   }
