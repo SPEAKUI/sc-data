@@ -10,6 +10,7 @@ app.use( app.router );
 app.use( express.static( __dirname ) );
 
 app.get( "/api/people", function ( req, res ) {
+  console.log(req.headers);
   res.json( _.findWhere( dummy.data.people, {
     name: req.param( "name" )
   } ) );

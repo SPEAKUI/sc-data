@@ -1,6 +1,6 @@
 {
   "name": "sc-data",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "A data module",
   "main": "index.js",
   "scripts": {
@@ -30,7 +30,7 @@
     "sc-extendify": "0.0.x",
     "sc-haskey": "0.0.x",
     "sc-merge": "0.0.x",
-    "sc-query": "0.0.x",
+    "sc-query": "0.0.12",
     "sc-is": "0.0.x",
     "sc-pick": "0.0.x",
     "sc-optionify": "0.0.x",

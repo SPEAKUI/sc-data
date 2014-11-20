@@ -63,7 +63,7 @@ exports = module.exports = Data;
 exports.config = config;
 exports.Query = Query;
 exports.Item = Item;
-},{"./config.json":1,"./item":3,"emitter-component":5,"q":6,"sc-extendify":8,"sc-hasKey":10,"sc-is":14,"sc-merge":19,"sc-optionify":22,"sc-query":25}],3:[function(_dereq_,module,exports){
+},{"./config.json":1,"./item":3,"emitter-component":5,"q":6,"sc-extendify":8,"sc-hasKey":9,"sc-is":13,"sc-merge":20,"sc-optionify":23,"sc-query":26}],3:[function(_dereq_,module,exports){
 var is = _dereq_( "sc-is" ),
   q = _dereq_( "q" ),
   pick = _dereq_( "sc-pick" ),
@@ -119,8 +119,7 @@ var Item = extendify( {
     } );
 
     if ( self[ "__optionify" ] ) {
-      console.log( "__optionify" );
-      // json = omit( json, [ "options" ] );
+      json = omit( json, [ "options" ] );
     }
 
     return json;
@@ -132,7 +131,7 @@ emitter( Item.prototype );
 optionify( Item.prototype );
 
 module.exports = Item;
-},{"emitter-component":5,"q":6,"sc-extendify":8,"sc-hasKey":10,"sc-is":14,"sc-omit":21,"sc-optionify":22,"sc-pick":23}],4:[function(_dereq_,module,exports){
+},{"emitter-component":5,"q":6,"sc-extendify":8,"sc-hasKey":9,"sc-is":13,"sc-omit":22,"sc-optionify":23,"sc-pick":24}],4:[function(_dereq_,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -681,22 +680,6 @@ if (typeof ReturnValue !== "undefined") {
     };
 }
 
-// Until V8 3.19 / Chromium 29 is released, SpiderMonkey is the only
-// engine that has a deployed base of browsers that support generators.
-// However, SM's generators use the Python-inspired semantics of
-// outdated ES6 drafts.  We would like to support ES6, but we'd also
-// like to make it possible to use generators in deployed browsers, so
-// we also support Python-style generators.  At some point we can remove
-// this block.
-var hasES6Generators;
-try {
-    /* jshint evil: true, nonew: false */
-    new Function("(function* (){ yield 1; })");
-    hasES6Generators = true;
-} catch (e) {
-    hasES6Generators = false;
-}
-
 // long stack traces
 
 var STACK_JUMP_SEPARATOR = "From previous event:";
@@ -997,6 +980,7 @@ defer.prototype.makeNodeResolver = function () {
  * @returns a promise that may be resolved with the given resolve and reject
  * functions, or rejected by a thrown exception in resolver
  */
+Q.Promise = promise; // ES6
 Q.promise = promise;
 function promise(resolver) {
     if (typeof resolver !== "function") {
@@ -1010,6 +994,11 @@ function promise(resolver) {
     }
     return deferred.promise;
 }
+
+promise.race = race; // ES6
+promise.all = all; // ES6
+promise.reject = reject; // ES6
+promise.resolve = Q; // ES6
 
 // XXX experimental.  This method is a way to denote that a local value is
 // serializable and should be immediately dispatched to a remote upon request,
@@ -1335,42 +1324,14 @@ Promise.prototype.isRejected = function () {
 // shimmed environments, this would naturally be a `Set`.
 var unhandledReasons = [];
 var unhandledRejections = [];
-var unhandledReasonsDisplayed = false;
 var trackUnhandledRejections = true;
-function displayUnhandledReasons() {
-    if (
-        !unhandledReasonsDisplayed &&
-        typeof window !== "undefined" &&
-        window.console
-    ) {
-        console.warn("[Q] Unhandled rejection reasons (should be empty):",
-                     unhandledReasons);
-    }
-
-    unhandledReasonsDisplayed = true;
-}
-
-function logUnhandledReasons() {
-    for (var i = 0; i < unhandledReasons.length; i++) {
-        var reason = unhandledReasons[i];
-        console.warn("Unhandled rejection reason:", reason);
-    }
-}
 
 function resetUnhandledRejections() {
     unhandledReasons.length = 0;
     unhandledRejections.length = 0;
-    unhandledReasonsDisplayed = false;
 
     if (!trackUnhandledRejections) {
         trackUnhandledRejections = true;
-
-        // Show unhandled rejection reasons if Node exits without handling an
-        // outstanding rejection.  (Note that Browserify presently produces a
-        // `process` global without the `EventEmitter` `on` method.)
-        if (typeof process !== "undefined" && process.on) {
-            process.on("exit", logUnhandledReasons);
-        }
     }
 }
 
@@ -1385,7 +1346,6 @@ function trackRejection(promise, reason) {
     } else {
         unhandledReasons.push("(no stack) " + reason);
     }
-    displayUnhandledReasons();
 }
 
 function untrackRejection(promise) {
@@ -1409,9 +1369,6 @@ Q.getUnhandledReasons = function () {
 
 Q.stopUnhandledRejectionTracking = function () {
     resetUnhandledRejections();
-    if (typeof process !== "undefined" && process.on) {
-        process.removeListener("exit", logUnhandledReasons);
-    }
     trackUnhandledRejections = false;
 };
 
@@ -1575,7 +1532,17 @@ function async(makeGenerator) {
         // when verb is "throw", arg is an exception
         function continuer(verb, arg) {
             var result;
-            if (hasES6Generators) {
+
+            // Until V8 3.19 / Chromium 29 is released, SpiderMonkey is the only
+            // engine that has a deployed base of browsers that support generators.
+            // However, SM's generators use the Python-inspired semantics of
+            // outdated ES6 drafts.  We would like to support ES6, but we'd also
+            // like to make it possible to use generators in deployed browsers, so
+            // we also support Python-style generators.  At some point we can remove
+            // this block.
+
+            if (typeof StopIteration === "undefined") {
+                // ES6 Generators
                 try {
                     result = generator[verb](arg);
                 } catch (exception) {
@@ -1587,6 +1554,7 @@ function async(makeGenerator) {
                     return when(result.value, callback, errback);
                 }
             } else {
+                // SpiderMonkey Generators
                 // FIXME: Remove this case when SM does ES6 generators.
                 try {
                     result = generator[verb](arg);
@@ -2291,8 +2259,8 @@ return Q;
 
 });
 
-}).call(this,_dereq_("/Users/dts/Sites/SitecoreSPEAK/utils/sc-data/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js"))
-},{"/Users/dts/Sites/SitecoreSPEAK/utils/sc-data/node_modules/browserify/node_modules/insert-module-globals/node_modules/process/browser.js":4}],7:[function(_dereq_,module,exports){
+}).call(this,_dereq_("E:\\asimov\\master\\sc-data\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js"))
+},{"E:\\asimov\\master\\sc-data\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js":4}],7:[function(_dereq_,module,exports){
 var extend = function ( object ) {
 
 	/**
@@ -2389,38 +2357,7 @@ var extendify = function ( fn ) {
 };
 
 module.exports = extendify;
-},{"./extend.johnresig.js":7,"sc-haskey":12,"sc-merge":19,"sc-omit":9}],9:[function(_dereq_,module,exports){
-function omit( object, omittedKeys ) {
-  var parsedObject = {};
-
-  if ( object !== Object( object ) ) {
-    return parsedObject;
-  }
-
-  omittedKeys = Array.isArray( omittedKeys ) ? omittedKeys : [];
-
-  Object.keys( object ).forEach( function ( key ) {
-    var keyOk = true;
-
-    omittedKeys.forEach( function ( omittedKey ) {
-
-      if ( keyOk === true && key === omittedKey ) {
-        keyOk = false;
-      }
-
-    } );
-
-    if ( keyOk === true ) {
-      parsedObject[ key ] = object[ key ];
-    }
-
-  } );
-
-  return parsedObject;
-}
-
-module.exports = omit;
-},{}],10:[function(_dereq_,module,exports){
+},{"./extend.johnresig.js":7,"sc-haskey":11,"sc-merge":20,"sc-omit":22}],9:[function(_dereq_,module,exports){
 var type = _dereq_( "type-component" ),
   has = Object.prototype.hasOwnProperty;
 
@@ -2449,7 +2386,7 @@ module.exports = function ( object, keys, keyType ) {
   return hasKey( object, keys, keyType );
 
 };
-},{"type-component":11}],11:[function(_dereq_,module,exports){
+},{"type-component":10}],10:[function(_dereq_,module,exports){
 
 /**
  * toString ref.
@@ -2481,11 +2418,11 @@ module.exports = function(val){
   return typeof val;
 };
 
-},{}],12:[function(_dereq_,module,exports){
+},{}],11:[function(_dereq_,module,exports){
+module.exports=_dereq_(9)
+},{"type-component":12}],12:[function(_dereq_,module,exports){
 module.exports=_dereq_(10)
-},{"type-component":13}],13:[function(_dereq_,module,exports){
-module.exports=_dereq_(11)
-},{}],14:[function(_dereq_,module,exports){
+},{}],13:[function(_dereq_,module,exports){
 var type = _dereq_( "./ises/type" ),
   is = {
     a: {},
@@ -2509,7 +2446,8 @@ var ises = {
   "string": [ "string", type( "string" ) ],
   "undefined": [ "undefined", type( "undefined" ) ],
   "empty": [ "empty", _dereq_( "./ises/empty" ) ],
-  "nullorundefined": [ "nullOrUndefined", "nullorundefined", _dereq_( "./ises/nullorundefined" ) ]
+  "nullorundefined": [ "nullOrUndefined", "nullorundefined", _dereq_( "./ises/nullorundefined" ) ],
+  "guid": [ "guid", _dereq_( "./ises/guid" ) ]
 }
 
 Object.keys( ises ).forEach( function ( key ) {
@@ -2526,8 +2464,9 @@ Object.keys( ises ).forEach( function ( key ) {
 
 } );
 
-module.exports = is;
-},{"./ises/empty":15,"./ises/nullorundefined":16,"./ises/type":17}],15:[function(_dereq_,module,exports){
+exports = module.exports = is;
+exports.type = type;
+},{"./ises/empty":14,"./ises/guid":15,"./ises/nullorundefined":16,"./ises/type":17}],14:[function(_dereq_,module,exports){
 var type = _dereq_("../type");
 
 module.exports = function ( value ) {
@@ -2548,7 +2487,13 @@ module.exports = function ( value ) {
   return empty;
 
 };
-},{"../type":18}],16:[function(_dereq_,module,exports){
+},{"../type":19}],15:[function(_dereq_,module,exports){
+var guid = _dereq_( "sc-guid" );
+
+module.exports = function ( value ) {
+  return guid.isValid( value );
+};
+},{"sc-guid":18}],16:[function(_dereq_,module,exports){
 module.exports = function ( value ) {
 	return value === null || value === undefined || value === void 0;
 };
@@ -2560,7 +2505,30 @@ module.exports = function ( _type ) {
     return type( _value ) === _type;
   }
 }
-},{"../type":18}],18:[function(_dereq_,module,exports){
+},{"../type":19}],18:[function(_dereq_,module,exports){
+var guidRx = "{?[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}}?";
+
+exports.generate = function () {
+  var d = new Date().getTime();
+  var guid = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace( /[xy]/g, function ( c ) {
+    var r = ( d + Math.random() * 16 ) % 16 | 0;
+    d = Math.floor( d / 16 );
+    return ( c === "x" ? r : ( r & 0x7 | 0x8 ) ).toString( 16 );
+  } );
+  return guid;
+};
+
+exports.match = function ( string ) {
+  var rx = new RegExp( guidRx, "g" ),
+    matches = ( typeof string === "string" ? string : "" ).match( rx );
+  return Array.isArray( matches ) ? matches : [];
+};
+
+exports.isValid = function ( guid ) {
+  var rx = new RegExp( guidRx );
+  return rx.test( guid );
+};
+},{}],19:[function(_dereq_,module,exports){
 var toString = Object.prototype.toString;
 
 module.exports = function ( val ) {
@@ -2583,7 +2551,7 @@ module.exports = function ( val ) {
 
   return typeof val;
 };
-},{}],19:[function(_dereq_,module,exports){
+},{}],20:[function(_dereq_,module,exports){
 var type = _dereq_( "type-component" );
 
 var merge = function () {
@@ -2615,11 +2583,40 @@ var merge = function () {
 };
 
 module.exports = merge;
-},{"type-component":20}],20:[function(_dereq_,module,exports){
-module.exports=_dereq_(11)
-},{}],21:[function(_dereq_,module,exports){
-module.exports=_dereq_(9)
+},{"type-component":21}],21:[function(_dereq_,module,exports){
+module.exports=_dereq_(10)
 },{}],22:[function(_dereq_,module,exports){
+function omit( object, omittedKeys ) {
+  var parsedObject = {};
+
+  if ( object !== Object( object ) ) {
+    return parsedObject;
+  }
+
+  omittedKeys = Array.isArray( omittedKeys ) ? omittedKeys : [];
+
+  Object.keys( object ).forEach( function ( key ) {
+    var keyOk = true;
+
+    omittedKeys.forEach( function ( omittedKey ) {
+
+      if ( keyOk === true && key === omittedKey ) {
+        keyOk = false;
+      }
+
+    } );
+
+    if ( keyOk === true ) {
+      parsedObject[ key ] = object[ key ];
+    }
+
+  } );
+
+  return parsedObject;
+}
+
+module.exports = omit;
+},{}],23:[function(_dereq_,module,exports){
 var merge = _dereq_( "sc-merge" );
 
 var optionify = function ( value, options ) {
@@ -2667,7 +2664,7 @@ var optionify = function ( value, options ) {
 };
 
 module.exports = optionify;
-},{"sc-merge":19}],23:[function(_dereq_,module,exports){
+},{"sc-merge":20}],24:[function(_dereq_,module,exports){
 function pick( object, validKeys ) {
   var parsedObject = {};
 
@@ -2696,13 +2693,17 @@ function pick( object, validKeys ) {
 }
 
 module.exports = pick;
-},{}],24:[function(_dereq_,module,exports){
+},{}],25:[function(_dereq_,module,exports){
 module.exports={
 	"defaults": {
 		"defaultHttpMethod": "get"
 	}
 }
-},{}],25:[function(_dereq_,module,exports){
+},{}],26:[function(_dereq_,module,exports){
+/**
+ * @namespace
+ */
+
 var q = _dereq_( "q" ),
   config = _dereq_( "./config.json" ),
   extendify = _dereq_( "sc-extendify" ),
@@ -2710,17 +2711,64 @@ var q = _dereq_( "q" ),
 
 var Query = extendify( {
 
+  /**
+   * `Query` is a versatile XHR module with various helpers and utilities to make configuring,
+   * executing and extending ajax related tasks very easy. `Query` is a small standalone module with
+   * everything baked in including callbacks and error handling by <a href="http://npmjs.org/q" target="_blank">q</a>
+   * which implements follows the standard <a href="http://promises-aplus.github.io/promises-spec/" target="_blank">promise</a> pattern.
+   *
+   * ```javascript
+   * var personQuery = new Query( "/person", "get" );
+   *
+   * personQuery.param( "name", "Kelsey Mayer" ).execute().then( function ( kelsey ) {
+   *
+   *   kelsey.name.should.equal( "Kelsey Mayer" );
+   *   _done();
+   *
+   * } );
+   * ```
+   *
+   * @class Query
+   * @constructor
+   * @param  {String} url     The URL end point
+   * @param  {String} type    The HTTP method
+   * @param  {Object} [options] The options
+   * @return {Query}
+   */
   init: function ( url, type, options ) {
     var self = this;
 
+    /**
+     * The URL end point
+     * @property {String} url
+     */
     self.url = url;
+
+    /**
+     * The HTTP method
+     * @property {String} type
+     */
     self.type = utils.is.string( type ) ? type : config.defaults.defaultHttpMethod;
+
+    /**
+     * The options
+     * @property {String} options
+     */
     self.options = utils.is.an.object( options ) ? options : {};
+
     self.__parameters = {};
     self.__queries = {};
-
+    self.__headers = {};
   },
 
+  /**
+   * Gets or sets all the parameters. A parameter is typically the JSON body data of the request.
+   *
+   * @method parameters
+   * @chainable
+   * @param  {Object} [data] Merges the given data into the current parameters
+   * @return {Mixed} If `data` was given, `self` is returned, otherwise all the parameters are returned
+   */
   parameters: function ( data ) {
     var self = this;
     if ( utils.is.an.object( data ) ) {
@@ -2730,6 +2778,15 @@ var Query = extendify( {
     return self.__parameters;
   },
 
+  /**
+   * Gets or sets a parameter by a key/value pair. A parameter is typically the JSON body data of the request.
+   *
+   * @method parameter
+   * @chainable
+   * @param  {String} key   The parameter key
+   * @param  {String} value The parameter value
+   * @return {Mixed} If `key` and `value` was given `self` is returned, if only `key` was given, the value of that key is returned.
+   */
   parameter: function ( key, value ) {
     var self = this;
 
@@ -2742,6 +2799,14 @@ var Query = extendify( {
     return self;
   },
 
+  /**
+   * Gets or sets all the queries. Queries are the key/value pairs added to the querystring of the request.
+   *
+   * @method queries
+   * @chainable
+   * @param  {Object} [data] Merges the given data into the current queries
+   * @return {Mixed} If `data` was given, `self` is returned, otherwise all the queries are returned
+   */
   queries: function ( data ) {
     var self = this;
     if ( utils.is.an.object( data ) ) {
@@ -2751,6 +2816,15 @@ var Query = extendify( {
     return self.__queries;
   },
 
+  /**
+   * Gets or sets a query by a key/value pair. A query is the key/value pair which is added to the queryingstring.
+   *
+   * @method query
+   * @chainable
+   * @param  {String} key   The query key
+   * @param  {String} value The query value
+   * @return {Mixed} If `key` and `value` was given `self` is returned, if only `key` was given, the value of that key is returned.
+   */
   query: function ( key, value ) {
     var self = this;
 
@@ -2763,6 +2837,33 @@ var Query = extendify( {
     return self;
   },
 
+  /**
+   * Gets or sets a header by a key/value pair. A header is the key/value pair which is added to the headers of the request.
+   *
+   * @method header
+   * @chainable
+   * @param  {String} key   The header key
+   * @param  {String} value The header value
+   * @return {Mixed} If `key` and `value` was given `self` is returned, if only `key` was given, the value of that key is returned.
+   */
+  header: function ( key, value ) {
+    var self = this;
+
+    if ( self.__headers.hasOwnProperty( key ) && utils.is.empty( value ) ) {
+      return self.__headers[ key ];
+    }
+
+    self.__headers[ key ] = value;
+
+    return self;
+  },
+
+  /**
+   * Executes the query by triggering the XHR request to the given url (end point).
+   *
+   * @method execute
+   * @return {Promise} This <a href="http://promises-aplus.github.io/promises-spec/" target="_blank">promise</a> is generated by <a href="http://npmjs.org/q" target="_blank">q</a>.
+   */
   execute: function () {
     var self = this,
       preRequestDeferred = q.defer(),
@@ -2773,7 +2874,8 @@ var Query = extendify( {
       type: self.type,
       url: self.url,
       data: self.__parameters,
-      query: self.__queries
+      query: self.__queries,
+      header: self.__headers
     };
 
     self.middleware( "preRequest", function ( error, middlewareResponse ) {
@@ -2818,12 +2920,46 @@ var Query = extendify( {
 Query.prototype.param = Query.prototype.parameter;
 
 utils.optionify( Query );
+
+/**
+ * Middleware integration using <a href="http://npmjs.org/sc-useify" target="_blank">sc-useify</a>.
+ *
+ * @static
+ * @property {Function} useify
+ *
+ */
 utils.useify( Query );
 
+/**
+ * Adds middleware using <a href="http://npmjs.org/sc-useify" target="_blank">sc-useify</a>. As of sc-query@0.0.11 there are two named middleware keys.
+ *
+ * - `preRequest` occurs just before the XHR request is made. The data is given to the middleware and should be given back when the callback is triggered.
+ * - `postRequest` occurs after the XHR request resolves. The data is given to the middleware and should be given back when the callback is triggered.
+ *
+ * @static
+ * @property {Function} use
+ */
+
 exports = module.exports = Query;
+
+/**
+ * A collection of helper utilities
+ *
+ * @static
+ * @property {Object} utils
+ */
 exports.utils = utils;
+
+/**
+ * The configuration object
+ *
+ * @static
+ * @property {Object} config
+ *           @param {String} defaults.defaultHttpMethod="GET" The default HTTP method
+ */
 exports.config = config;
-},{"./config.json":24,"./utils":35,"q":6,"sc-extendify":8}],26:[function(_dereq_,module,exports){
+
+},{"./config.json":25,"./utils":36,"q":6,"sc-extendify":8}],27:[function(_dereq_,module,exports){
 module.exports={
   "defaults": {
     "options": {
@@ -2835,7 +2971,7 @@ module.exports={
     }
   }
 }
-},{}],27:[function(_dereq_,module,exports){
+},{}],28:[function(_dereq_,module,exports){
 var config = _dereq_( "./config.json" ),
   q = _dereq_( "q" ),
   superagent = _dereq_( "superagent" ),
@@ -2856,6 +2992,7 @@ var Request = function ( options ) {
 
     superagent( task.data.type, task.data.url )[ /get/i.test( task.data.type ) ? "query" : "send" ]( task.data.data )
       .query( task.data.query )
+      .set( task.data.header || {} )
       .accept( "json" )
       .type( "json" )
       .end( function ( error, response ) {
@@ -2917,30 +3054,9 @@ exports = module.exports = function ( obj, options ) {
 
 exports.use = Request.use;
 exports.useify = Request.useify;
-},{"./config.json":26,"q":6,"sc-guid":28,"sc-haskey":12,"sc-is":14,"sc-merge":19,"sc-queue":29,"sc-useify":34,"superagent":30}],28:[function(_dereq_,module,exports){
-var guidRx = "{?[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}}?";
-
-exports.generate = function () {
-  var d = new Date().getTime();
-  var guid = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace( /[xy]/g, function ( c ) {
-    var r = ( d + Math.random() * 16 ) % 16 | 0;
-    d = Math.floor( d / 16 );
-    return ( c === "x" ? r : ( r & 0x7 | 0x8 ) ).toString( 16 );
-  } );
-  return guid;
-};
-
-exports.match = function ( string ) {
-  var rx = new RegExp( guidRx, "g" ),
-    matches = ( typeof string === "string" ? string : "" ).match( rx );
-  return Array.isArray( matches ) ? matches : [];
-};
-
-exports.isValid = function ( guid ) {
-  var rx = new RegExp( guidRx );
-  return rx.test( guid );
-};
-},{}],29:[function(_dereq_,module,exports){
+},{"./config.json":27,"q":6,"sc-guid":29,"sc-haskey":11,"sc-is":13,"sc-merge":20,"sc-queue":30,"sc-useify":35,"superagent":31}],29:[function(_dereq_,module,exports){
+module.exports=_dereq_(18)
+},{}],30:[function(_dereq_,module,exports){
 /**
  * Based on : https://github.com/component/queue
  */
@@ -3017,7 +3133,7 @@ Queue.prototype.exec = function ( job ) {
 };
 
 module.exports = Queue;
-},{"sc-is":14}],30:[function(_dereq_,module,exports){
+},{"sc-is":13}],31:[function(_dereq_,module,exports){
 /**
  * Module dependencies.
  */
@@ -4013,7 +4129,7 @@ request.put = function(url, data, fn){
 
 module.exports = request;
 
-},{"emitter":31,"reduce":32}],31:[function(_dereq_,module,exports){
+},{"emitter":32,"reduce":33}],32:[function(_dereq_,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -4171,7 +4287,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],32:[function(_dereq_,module,exports){
+},{}],33:[function(_dereq_,module,exports){
 
 /**
  * Reduce `arr` with `fn`.
@@ -4196,13 +4312,13 @@ module.exports = function(arr, fn, initial){
   
   return curr;
 };
-},{}],33:[function(_dereq_,module,exports){
+},{}],34:[function(_dereq_,module,exports){
 module.exports={
 	"defaults": {
 		"middlewareKey": "all"
 	}
 }
-},{}],34:[function(_dereq_,module,exports){
+},{}],35:[function(_dereq_,module,exports){
 var is = _dereq_( "sc-is" ),
   config = _dereq_( "./config.json" ),
   noop = function () {};
@@ -4317,7 +4433,7 @@ module.exports = function ( _objectOrFunction ) {
   }
 
 };
-},{"./config.json":33,"sc-is":14}],35:[function(_dereq_,module,exports){
+},{"./config.json":34,"sc-is":13}],36:[function(_dereq_,module,exports){
 module.exports = {
   merge: _dereq_( "sc-merge" ),
   optionify: _dereq_( "sc-optionify" ),
@@ -4325,6 +4441,6 @@ module.exports = {
   useify: _dereq_( "sc-useify" ),
   is: _dereq_( "sc-is" )
 }
-},{"sc-is":14,"sc-merge":19,"sc-optionify":22,"sc-request":27,"sc-useify":34}]},{},[2])
+},{"sc-is":13,"sc-merge":20,"sc-optionify":23,"sc-request":28,"sc-useify":35}]},{},[2])
 (2)
 });

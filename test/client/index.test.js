@@ -39,7 +39,7 @@ describe( "scdata", function () {
 
     it( "should get", function ( _done ) {
 
-      personService.get().parameter( "name", "max" ).execute().then( function ( max ) {
+      personService.get().parameter( "name", "max" ).header("x-request", "someone").execute().then( function ( max ) {
         max.name.should.equal( "max" );
         _done();
       } ).fail( _done );
