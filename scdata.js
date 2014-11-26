@@ -24,12 +24,14 @@ var Data = extendify( {
     self.option( merge( {}, options ) );
     self.url = hasKey( self.options, "url", "string" ) ? self.options.url : "";
     self.type = hasKey( self.options, "type", "string" ) ? self.options.type : config.defaultHttpMethod;
+    self.headers = hasKey( self.options, "headers", "object") ? self.options.headers : {};
   },
 
   get: function ( url, options ) {
     var self = this;
     url = is.a.string( url ) ? url : self.url;
     options = is.an.object( url ) ? url : options || {};
+    options = merge( options, { headers: self.headers } );
     return new Query( self.url, "get", options );
   },
 
@@ -37,6 +39,7 @@ var Data = extendify( {
     var self = this;
     url = is.a.string( url ) ? url : self.url;
     options = is.an.object( url ) ? url : options || {};
+    options = merge( options, { headers: self.headers } );
     return new Query( self.url, "put", options );
   },
 
@@ -44,6 +47,7 @@ var Data = extendify( {
     var self = this;
     url = is.a.string( url ) ? url : self.url;
     options = is.an.object( url ) ? url : options || {};
+    options = merge( options, { headers: self.headers } );
     return new Query( self.url, "post", options );
   },
 
@@ -51,6 +55,7 @@ var Data = extendify( {
     var self = this;
     url = is.a.string( url ) ? url : self.url;
     options = is.an.object( url ) ? url : options || {};
+    options = merge( options, { headers: self.headers } );
     return new Query( self.url, "delete", options );
   }
 
@@ -2759,6 +2764,10 @@ var Query = extendify( {
     self.__parameters = {};
     self.__queries = {};
     self.__headers = {};
+
+    if( self.options.headers ) {
+      self.__headers = utils.merge( self.__headers, self.options.headers );
+    }
   },
 
   /**

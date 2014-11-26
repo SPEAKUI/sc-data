@@ -13,6 +13,7 @@ describe( "scdata", function () {
     data.should.have.property( "options", {} );
     data.should.have.property( "url", "" );
     data.should.have.property( "type", "GET" );
+    data.should.have.property( "headers", {} );
   } );
 
   describe( "scdata.Item", function () {
